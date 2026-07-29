@@ -1,14 +1,14 @@
 {
-  "name": "sithija-md",
+  "name": "lakiya-md",
   "version": "1.0.1",
-  "description": "sithija-MD WhatsApp Bot with Multi-Number Support",
+  "description": "Lakiya-MD WhatsApp Bot with Multi-Number Support",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-   "@whiskeysockets/baileys": "7.0.0-rc13",
+    "@whiskeysockets/baileys": "7.0.0-rc13",
     "express": "^4.18.2",
     "pino": "^8.17.0",
     "mongoose": "^8.16.0",
@@ -20,15 +20,15 @@
     "fs-extra": "^11.2.0"
   },
   "engines": {
-    "node": ">=18.x"
+    "node": ">=24.x"
   },
   "keywords": [
     "whatsapp",
     "bot",
     "baileys",
     "multi-device",
-    "sithija-md"
+    "lakiya-md"
   ],
-  "author": "sithija",
+  "author": "lakiya",
   "license": "MIT"
 }
