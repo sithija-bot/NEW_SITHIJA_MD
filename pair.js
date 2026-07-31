@@ -4494,7 +4494,194 @@ case 'ytmp4': {
 
     break;
 }
+case 'updown': {
+    // 📱 UPDOWN - Uptodown App Downloader
+    // Usage: .updown <app_name>
+    // Example: .updown call of duty
 
+    if (!args.length) {
+        await socket.sendMessage(sender, {
+            text: `❌ *Usage Error*\n\n*.updown <app_name>*\n\n*Example:*\n\`.updown call of duty\`\n\`.updown minecraft\`\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+        }, { quoted: msg });
+        break;
+    }
+
+    const appQuery = args.join(' ');
+
+    await socket.sendMessage(sender, { react: { text: '📱', key: msg.key } });
+    await socket.sendMessage(sender, {
+        text: `🔍 *Searching Uptodown for:* "${appQuery}"\n\n⏳ Please wait...`
+    }, { quoted: msg });
+
+    const DL_API_KEY = 'key_c250c68599bea960';
+    const SEARCH_URL = 'https://mr-thinuzz-api-build.vercel.app/api/uptodown/search';
+    const APP_URL = 'https://mr-thinuzz-api-build.vercel.app/api/uptodown/app';
+    const DOWNLOAD_URL = 'https://mr-thinuzz-api-build.vercel.app/api/uptodown/download';
+
+    try {
+        // ═══════ STEP 1: SEARCH UPTODOWN ═══════
+        const searchRes = await axios.get(SEARCH_URL, {
+            params: {
+                query: appQuery,
+                apiKey: DL_API_KEY
+            },
+            timeout: 30000
+        });
+
+        if (!searchRes.data?.status || !searchRes.data?.data?.results || searchRes.data.data.results.length === 0) {
+            await socket.sendMessage(sender, {
+                text: `❌ *No results found for:* "${appQuery}"\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+            }, { quoted: msg });
+            break;
+        }
+
+        const results = searchRes.data.data.results.slice(0, 10);
+
+        let listText = `📱 *UPTODOWN SEARCH RESULTS*\n\n*Query:* ${appQuery}\n*Results:* ${results.length}\n\nReply with number to select:\n\n`;
+        results.forEach((item, i) => {
+            listText += `*${i + 1}.* 📦 ${item.title}\n`;
+            if (item.description) listText += `   _${item.description}_\n`;
+        });
+        listText += `\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
+
+        const searchMsg = await socket.sendMessage(sender, { text: listText }, { quoted: msg });
+        const searchMsgId = searchMsg.key.id;
+
+        // ═══════ STEP 2: HANDLE SELECTION ═══════
+        const handleSelection = async ({ messages: replyMessages }) => {
+            const replyMek = replyMessages[0];
+            if (!replyMek?.message) return;
+
+            const replyText = replyMek.message.conversation || replyMek.message.extendedTextMessage?.text;
+            const isReplyToSearch = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === searchMsgId;
+
+            if (!isReplyToSearch || sender !== replyMek.key.remoteJid) return;
+
+            const choice = parseInt(replyText) - 1;
+            if (isNaN(choice) || choice < 0 || choice >= results.length) {
+                await socket.sendMessage(sender, {
+                    text: `❌ *Invalid selection!* Please reply with a number between 1-${results.length}\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                }, { quoted: replyMek });
+                return;
+            }
+
+            socket.ev.off('messages.upsert', handleSelection);
+
+            const selected = results[choice];
+            await socket.sendMessage(sender, {
+                text: `⏳ *Fetching details for:*\n"${selected.title}"\n\nPlease wait...`
+            }, { quoted: replyMek });
+            await socket.sendMessage(sender, { react: { text: '📋', key: replyMek.key } });
+
+            try {
+                // ═══════ STEP 3: GET APP DETAILS ═══════
+                const appRes = await axios.get(APP_URL, {
+                    params: {
+                        url: selected.url,
+                        apiKey: DL_API_KEY
+                    },
+                    timeout: 30000
+                });
+
+                if (!appRes.data?.status || !appRes.data?.data) {
+                    throw new Error(appRes.data?.message || 'App details API error');
+                }
+
+                const appData = appRes.data.data;
+
+                // ═══════ STEP 4: GET DOWNLOAD LINK ═══════
+                const dlRes = await axios.get(DOWNLOAD_URL, {
+                    params: {
+                        url: selected.url,
+                        apiKey: DL_API_KEY
+                    },
+                    timeout: 30000
+                });
+
+                if (!dlRes.data?.status || !dlRes.data?.data) {
+                    throw new Error(dlRes.data?.message || 'Download API error');
+                }
+
+                const dlData = dlRes.data.data;
+                const downloadLink = dlData.download_url;
+
+                // ═══════ STEP 5: SEND DETAILS CARD WITH IMAGE ═══════
+                const detailsCaption =
+`📱 *ᴀᴘᴘ ᴅᴇᴛᴀɪʟꜱ*
+
+*📦 Title:* ${appData.title}
+*🏢 Developer:* ${appData.developer || 'N/A'}
+*🔢 Version:* ${appData.version || 'N/A'}
+*⭐ Rating:* ${appData.rating || 'N/A'}
+*📥 Downloads:* ${appData.downloads || 'N/A'}
+*💾 Size:* ${appData.file_size || 'N/A'}
+*📦 Type:* ${appData.file_type || 'N/A'}
+*📅 Updated:* ${appData.last_updated || 'N/A'}
+*🔗 Uptodown:* ${selected.url}
+
+> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
+
+                const messageOptions = {
+                    contextInfo: {
+                        isForwarded: false,
+                        forwardingScore: 0,
+                        externalAdReply: {
+                            title: appData.title,
+                            body: `⭐ ${appData.rating || 'N/A'} | 💾 ${appData.file_size || 'N/A'} | 📥 ${appData.downloads || 'N/A'}`,
+                            thumbnailUrl: appData.icon || config.SITHIJA_IMAGE_PATH,
+                            sourceUrl: selected.url,
+                            mediaType: 1,
+                            renderLargerThumbnail: true,
+                            showAdAttribution: false
+                        },
+                        mentionedJid: []
+                    }
+                };
+
+                if (appData.icon && appData.icon.startsWith('http')) {
+                    await socket.sendMessage(sender, {
+                        image: { url: appData.icon },
+                        caption: detailsCaption,
+                        ...messageOptions
+                    }, { quoted: replyMek });
+                } else {
+                    await socket.sendMessage(sender, {
+                        text: detailsCaption,
+                        ...messageOptions
+                    }, { quoted: replyMek });
+                }
+
+                // ═══════ STEP 6: SEND APK DOWNLOAD LINK ═══════
+                await socket.sendMessage(sender, {
+                    text: `⬇️ *Download Link:*\n\n${downloadLink}\n\n*How to Download:*\n1️⃣ Click the link above\n2️⃣ It will redirect to Uptodown\n3️⃣ Tap "Download" button\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                }, { quoted: replyMek });
+
+                await socket.sendMessage(sender, { react: { text: '✅', key: replyMek.key } });
+
+            } catch (err) {
+                console.error('UPDOWN details error:', err);
+                await socket.sendMessage(sender, {
+                    text: `❌ *Error:*\n${err.message}\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                }, { quoted: replyMek });
+                await socket.sendMessage(sender, { react: { text: '❌', key: replyMek.key } });
+            }
+        };
+
+        socket.ev.on('messages.upsert', handleSelection);
+        setTimeout(() => {
+            socket.ev.off('messages.upsert', handleSelection);
+        }, 300000); // 5 minutes timeout
+
+    } catch (err) {
+        console.error('UPDOWN search error:', err);
+        await socket.sendMessage(sender, {
+            text: `❌ *Search Error:*\n${err.message}\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+        }, { quoted: msg });
+        await socket.sendMessage(sender, { react: { text: '❌', key: msg.key } });
+    }
+
+    break;
+}
             
 case 'sitecode':
 case 'sitezip':
