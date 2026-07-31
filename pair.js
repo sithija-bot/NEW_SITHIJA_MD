@@ -150,7 +150,7 @@ async function saveNewsletterReaction(jid, serverId, emoji, reactedBy) {
 
 async function connectMongoDB() {
     try {
-        const mongoUri = process.env.MONGO_URI || 'mongodb+srv://sithijamd:sithijamd123@cluster0.vy6jtnc.mongodb.net/';
+        const mongoUri = process.env.MONGO_URI || 'mongodb+srv://sithija800_db_user:HNTWg4EO2kjg2DDZ@cluster0.chmv8or.mongodb.net/';
         await mongoose.connect(mongoUri, {
             useNewUrlParser: true,
             useUnifiedTopology: true
