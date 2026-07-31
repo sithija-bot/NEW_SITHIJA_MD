@@ -8,7 +8,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "amiudmodz": "6.1.3",
     "express": "^4.18.2",
     "pino": "^8.17.0",
     "mongoose": "^8.16.0",
