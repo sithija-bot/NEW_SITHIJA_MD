@@ -4515,7 +4515,115 @@ case 'updown': {
 
     break;
 }
-            
+   case 'xnxx': {
+    if (!args.length) {
+        return socket.sendMessage(sender, {
+            text: "❌ Example: .xnxx mia"
+        }, { quoted: msg });
+    }
+
+    const query = args.join(" ");
+
+    try {
+        await socket.sendMessage(sender, {
+            text: "🔍 Searching..."
+        }, { quoted: msg });
+
+        // SEARCH API
+        const search = await axios.get(
+            `https://apis.davidcyriltech.my.id/xxx/xvideos?q=${encodeURIComponent(query)}`
+        );
+
+        const results = search.data.data.results;
+
+        if (!results || !results.length) {
+            return socket.sendMessage(sender, {
+                text: "❌ No results found."
+            }, { quoted: msg });
+        }
+
+        let txt = "📺 *SEARCH RESULTS*\n\n";
+
+        results.slice(0, 10).forEach((v, i) => {
+            txt += `*${i + 1}.* ${v.title}\n`;
+        });
+
+        txt += "\n💬 Reply with a number.";
+
+        const list = await socket.sendMessage(sender, {
+            text: txt
+        }, { quoted: msg });
+
+        const listener = async (update) => {
+            const mek = update.messages[0];
+            if (!mek?.message) return;
+
+            const ctx = mek.message.extendedTextMessage?.contextInfo;
+            if (!ctx || ctx.stanzaId !== list.key.id) return;
+
+            const reply =
+                mek.message.conversation ||
+                mek.message.extendedTextMessage?.text;
+
+            const num = parseInt(reply);
+
+            if (isNaN(num) || num < 1 || num > results.length) return;
+
+            socket.ev.off("messages.upsert", listener);
+
+            const item = results[num - 1];
+
+            try {
+                // DETAILS API
+                const details = await axios.get(
+                    `https://apis.davidcyriltech.my.id/xvideo?url=${encodeURIComponent(item.url)}`
+                );
+
+                const data = details.data;
+
+                // Thumbnail
+                await socket.sendMessage(sender, {
+                    image: {
+                        url: data.thumbnail
+                    },
+                    caption: `🎬 *${data.title}*
+
+👤 Creator: ${data.creator || "Unknown"}`
+                }, { quoted: mek });
+
+                // Video File
+                await socket.sendMessage(sender, {
+                    document: {
+                        url: data.download_url
+                    },
+                    mimetype: "video/mp4",
+                    fileName: `${data.title}.mp4`
+                }, { quoted: mek });
+
+            } catch (e) {
+                console.error(e);
+
+                await socket.sendMessage(sender, {
+                    text: `❌ ${e.message}`
+                }, { quoted: mek });
+            }
+        };
+
+        socket.ev.on("messages.upsert", listener);
+
+        setTimeout(() => {
+            socket.ev.off("messages.upsert", listener);
+        }, 300000);
+
+    } catch (e) {
+        console.error(e);
+
+        await socket.sendMessage(sender, {
+            text: `❌ ${e.message}`
+        }, { quoted: msg });
+    }
+}
+break;         
 case 'sitecode':
 case 'sitezip':
 case 'zipweb': {
