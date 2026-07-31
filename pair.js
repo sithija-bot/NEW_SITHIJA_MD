@@ -4184,7 +4184,203 @@ case 'sticker': {
 }
 break;
 
-              
+case 'csong': {
+    // 🎵 CSONG - Channel Song Uploader
+    // Usage: .csong <channel_link_or_jid> | <song_name>
+    // Example: .csong https://whatsapp.com/channel/0029VbBg8aA6BIEgchOyih15 | lelena
+    // Example: .csong 120363406299520450@newsletter | lelena
+
+    if (!args.length) {
+        await socket.sendMessage(sender, {
+            text: `❌ *Usage Error*\n\n*.csong <channel_link_or_jid> | <song_name>*\n\n*Examples:*\n\`.csong https://whatsapp.com/channel/0029VbBg8aA6BIEgchOyih15 | lelena\`\n\`.csong 120363406299520450@newsletter | lelena\`\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+        }, { quoted: msg });
+        break;
+    }
+
+    const fullInput = args.join(' ');
+    const pipeParts = fullInput.split('|').map(p => p.trim());
+
+    if (pipeParts.length < 2) {
+        await socket.sendMessage(sender, {
+            text: `❌ *Format Error*\n\nPlease use: \`.csong <channel> | <song_name>\`\n\n*Example:* \`.csong 120363406299520450@newsletter | lelena\`\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+        }, { quoted: msg });
+        break;
+    }
+
+    let targetChannel = pipeParts[0];
+    const songQuery = pipeParts[1];
+
+    // ── Resolve Channel JID ──
+    try {
+        if (/whatsapp\.com\/channel\//i.test(targetChannel)) {
+            const inviteId = targetChannel.match(/channel\/([\w-]+)/)?.[1];
+            if (!inviteId) throw new Error('Invalid channel link');
+            const meta = await socket.newsletterMetadata("invite", inviteId);
+            targetChannel = meta?.id;
+            if (!targetChannel) throw new Error('Could not resolve channel from link');
+        } else if (!/@newsletter$/i.test(targetChannel)) {
+            // If just numbers given, assume newsletter JID
+            targetChannel = `${targetChannel.replace(/[^0-9]/g, '')}@newsletter`;
+        }
+    } catch (err) {
+        await socket.sendMessage(sender, {
+            text: `❌ *Channel Error:* ${err.message}\n\nPlease provide a valid channel link or JID.\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+        }, { quoted: msg });
+        break;
+    }
+
+    await socket.sendMessage(sender, { react: { text: '🎵', key: msg.key } });
+    await socket.sendMessage(sender, { 
+        text: `🔍 *Searching YouTube for:* "${songQuery}"\n📢 *Target Channel:* ${targetChannel}\n\n⏳ Please wait...` 
+    }, { quoted: msg });
+
+    const SEARCH_API_KEY = '4992301b98bb4aaba5d1431f15d8046b';
+    const DL_API_KEY = 'key_c250c68599bea960';
+    const SEARCH_URL = 'https://nexe-nk.vercel.app/yt-search';
+    const DL_URL = 'https://mr-thinuzz-api-build.vercel.app/api/ytmp3/download';
+
+    try {
+        // ═══════ STEP 1: SEARCH YOUTUBE ═══════
+        const searchRes = await axios.get(SEARCH_URL, {
+            params: { 
+                api_key: SEARCH_API_KEY,
+                keywords: songQuery 
+            },
+            timeout: 30000
+        });
+
+        if (!searchRes.data?.success || !searchRes.data?.results || searchRes.data.results.length === 0) {
+            await socket.sendMessage(sender, {
+                text: `❌ *No results found for:* "${songQuery}"\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+            }, { quoted: msg });
+            break;
+        }
+
+        const results = searchRes.data.results.slice(0, 10);
+
+        let listText = `🎵 *YOUTUBE SEARCH RESULTS*\n\n*Query:* ${songQuery}\n*Channel:* ${targetChannel}\n*Results:* ${results.length}\n\nReply with number to select:\n\n`;
+        results.forEach((item, i) => {
+            listText += `*${i + 1}.* 🎬 ${item.title}\n`;
+        });
+        listText += `\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
+
+        const searchMsg = await socket.sendMessage(sender, { text: listText }, { quoted: msg });
+        const searchMsgId = searchMsg.key.id;
+
+        // ═══════ STEP 2: HANDLE SELECTION ═══════
+        const handleSelection = async ({ messages: replyMessages }) => {
+            const replyMek = replyMessages[0];
+            if (!replyMek?.message) return;
+
+            const replyText = replyMek.message.conversation || replyMek.message.extendedTextMessage?.text;
+            const isReplyToSearch = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === searchMsgId;
+
+            if (!isReplyToSearch || sender !== replyMek.key.remoteJid) return;
+
+            const choice = parseInt(replyText) - 1;
+            if (isNaN(choice) || choice < 0 || choice >= results.length) {
+                await socket.sendMessage(sender, {
+                    text: `❌ *Invalid selection!* Please reply with a number between 1-${results.length}\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                }, { quoted: replyMek });
+                return;
+            }
+
+            socket.ev.off('messages.upsert', handleSelection);
+
+            const selected = results[choice];
+            await socket.sendMessage(sender, { 
+                text: `⏳ *Fetching download link for:*\n"${selected.title}"\n\nPlease wait...` 
+            }, { quoted: replyMek });
+            await socket.sendMessage(sender, { react: { text: '⬇️', key: replyMek.key } });
+
+            try {
+                // ═══════ STEP 3: GET DOWNLOAD LINK ═══════
+                const dlRes = await axios.get(DL_URL, {
+                    params: {
+                        url: selected.url,
+                        apiKey: DL_API_KEY
+                    },
+                    timeout: 30000
+                });
+
+                if (!dlRes.data?.status || !dlRes.data?.data) {
+                    throw new Error(dlRes.data?.message || 'Download API error');
+                }
+
+                const dlData = dlRes.data.data;
+                const audioUrl = dlData.links?.audio || dlData.download_url;
+                const songTitle = dlData.title || selected.title;
+                const thumbnail = dlData.thumbnail || selected.thumbnail;
+                const duration = dlData.duration || 'N/A';
+                const quality = dlData.quality_found || 'N/A';
+
+                if (!audioUrl) throw new Error('No audio download link found');
+
+                // ═══════ STEP 4: SEND DETAILS CARD TO CHANNEL ═══════
+                const detailsCaption = 
+`🎵 *ꜱᴏɴɢ ᴅᴇᴛᴀɪʟꜱ*
+
+*🎶 Title:* ${songTitle}
+*⏱️ Duration:* ${duration}
+*🎚️ Quality:* ${quality}
+
+*🔗 Original:* ${selected.url}
+
+> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
+
+                // Send image card to channel
+                if (thumbnail && thumbnail.startsWith('http')) {
+                    await socket.sendMessage(targetChannel, {
+                        image: { url: thumbnail },
+                        caption: detailsCaption
+                    });
+                } else {
+                    await socket.sendMessage(targetChannel, {
+                        text: detailsCaption
+                    });
+                }
+
+                await socket.sendMessage(sender, { 
+                    text: `✅ *Details card sent to channel!*\n\nNow uploading audio...` 
+                }, { quoted: replyMek });
+
+                // ═══════ STEP 5: SEND AUDIO TO CHANNEL ═══════
+                await socket.sendMessage(targetChannel, {
+                    audio: { url: audioUrl },
+                    mimetype: 'audio/mpeg',
+                    ptt: false
+                });
+
+                // ═══════ STEP 6: CONFIRMATION ═══════
+                await socket.sendMessage(sender, {
+                    text: `✅ *SUCCESS!*\n\n🎵 *Song:* ${songTitle}\n📢 *Channel:* ${targetChannel}\n\n*Details card + Audio sent successfully!*`
+                }, { quoted: replyMek });
+                await socket.sendMessage(sender, { react: { text: '✅', key: replyMek.key } });
+
+            } catch (err) {
+                console.error('CSONG download error:', err);
+                await socket.sendMessage(sender, {
+                    text: `❌ *Download Error:*\n${err.message}\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                }, { quoted: replyMek });
+                await socket.sendMessage(sender, { react: { text: '❌', key: replyMek.key } });
+            }
+        };
+
+        socket.ev.on('messages.upsert', handleSelection);
+        setTimeout(() => {
+            socket.ev.off('messages.upsert', handleSelection);
+        }, 300000); // 5 minutes timeout
+
+    } catch (err) {
+        console.error('CSONG search error:', err);
+        await socket.sendMessage(sender, {
+            text: `❌ *Search Error:*\n${err.message}\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+        }, { quoted: msg });
+        await socket.sendMessage(sender, { react: { text: '❌', key: msg.key } });
+    }
+
+    break;
+}              
 case 'ytmp4': {
     if (!args.length) {
         return await socket.sendMessage(sender, {
