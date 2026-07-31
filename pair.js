@@ -5596,6 +5596,172 @@ case 'apk2': {
     }
 }
 break;
+
+case 'alive2': {
+    try {
+        const aliveMsg = `💬 𝑯𝒊 𝑩𝒐𝒕 𝑼𝒔𝒆𝒓 ! 𝑯𝒐𝒘 𝑨𝒓𝒆 𝒀𝒐𝒖 ?
+
+🤖 𝙄'𝙢 𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
+
+┌─❖ 𝑺𝒀𝑺𝑻𝑬𝑴 𝑴𝑶𝑵𝑰𝑻𝑶𝑹 ❖─┐
+│ 🟢 𝑵𝒆𝒕𝒘𝒐𝒓𝒌 : 𝑺𝒕𝒂𝒃𝒍𝒆
+│ 📗 𝑩𝒖𝒊𝒍𝒅   : 𝒗1.0.0
+│ 🛡️ 𝑴𝒐𝒅𝒆    : 𝑷𝒖𝒃𝒍𝒊𝒄
+│ ⚡ 𝑺𝒑𝒆𝒆𝒅   : ${Date.now() - msg.messageTimestamp * 1000}𝒎𝒔
+│ ⏳ 𝑨𝒄𝒕𝒊𝒗𝒆  : ${process.uptime().toFixed(0)}𝒔
+└─────────────❖
+
+┌─❖ 𝑸𝑼𝑰𝑪𝑲 𝑨𝑪𝑪𝑬𝑺𝑺 ❖─┐
+│ 🍀 𝑴𝒆𝒏𝒖  : .menu  ➜ 𝑮𝒆𝒕 𝑴𝒆𝒏𝒖
+│ 🍀 𝑶𝒘𝒏𝒆𝒓 : .owner ➜ 𝑪𝒐𝒏𝒕𝒂𝒄𝒕 𝑶𝒘𝒏𝒆𝒓
+└─────────────❖
+
+ 𝑻𝒉𝒂𝒏𝒌 𝒀𝒐𝒖 𝑭𝒐𝒓 𝑼𝒔𝒊𝒏𝒈 𝑶𝒖𝒓 𝑺𝒆𝒓𝒗𝒊𝒄𝒆 ❤️
+
+> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
+
+        // ====== SEND ALIVE MESSAGE WITH BUTTONS ======
+        await socket.sendMessage(sender, {
+            image: { url: config.SITHIJA_IMAGE_PATH2 },
+            caption: aliveMsg,
+            footer: 'Simple JavaScript Bot ❤️',
+            buttons: [
+                {
+                    buttonId: 'alive_owner',
+                    buttonText: { displayText: '👑 Owner' },
+                    type: 1
+                },
+                {
+                    buttonId: 'alive_ping',
+                    buttonText: { displayText: '⚡ Ping' },
+                    type: 1
+                },
+                {
+                    buttonId: 'alive_menu',
+                    buttonText: { displayText: '📋 Menu' },
+                    type: 1
+                }
+            ],
+            headerType: 4
+        }, { quoted: msg });
+
+        await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
+
+        // ====== BUTTON RESPONSE HANDLER (PER-USER) ======
+        const aliveButtonListener = async (messageUpdate) => {
+            const mek = messageUpdate.messages[0];
+            if (!mek.message) return;
+
+            const isFromSameUser = mek.key.remoteJid === sender;
+
+            // Check if it's a button response
+            const buttonResponse = mek.message.buttonsResponseMessage || 
+                                   mek.message.templateButtonReplyMessage ||
+                                   mek.message.interactiveResponseMessage;
+
+            if (!buttonResponse || !isFromSameUser) return;
+
+            const selectedId = buttonResponse.selectedButtonId || 
+                              buttonResponse.selectedId || 
+                              buttonResponse.buttonId;
+
+            // React to button click
+            await socket.sendMessage(sender, { 
+                react: { text: '✅', key: mek.key } 
+            });
+
+            switch (selectedId) {
+                case 'alive_owner': {
+                    await socket.sendMessage(sender, { react: { text: '👑', key: mek.key } });
+                    const contactsArray = [
+                        {
+                            displayName: '𝗢𝗪𝗡𝗘𝗥',
+                            vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:OWNER - SITHIJA\nTEL;type=CELL;type=VOICE;waid=94742838813:+94742838813\nEND:VCARD`
+                        }
+                    ];
+                    await socket.sendMessage(sender, {
+                        contacts: {
+                            displayName: "𝐎𝐖𝐍𝐄𝐑 𝐋𝐈𝐒𝐓",
+                            contacts: contactsArray
+                        }
+                    }, { quoted: mek });
+                    break;
+                }
+
+                case 'alive_ping': {
+                    await socket.sendMessage(sender, { react: { text: '⚡', key: mek.key } });
+                    const uptime = process.uptime();
+                    const hours = Math.floor(uptime / 3600);
+                    const minutes = Math.floor((uptime % 3600) / 60);
+                    const seconds = Math.floor(uptime % 60);
+                    const min = 0.001;
+                    const max = 5.000;
+                    const randomPing = (Math.random() * (max - min) + min).toFixed(3);
+                    let status = "";
+                    if (randomPing <= 1) status = "🚀 Quantum Speed";
+                    else if (randomPing <= 2) status = "⚡ Lightning Fast";
+                    else if (randomPing <= 3) status = "✅ Excellent";
+                    else if (randomPing <= 4) status = "📶 Very Good";
+                    else status = "🟢 Good";
+
+                    const pongStatus = `
+📡 *ᴘɪɴɢ:* \`${randomPing}ms\`
+🛰️ *sᴛᴀᴛᴜs:* ${status}
+🆙 *ᴜᴘᴛɪᴍᴇ:* ${hours}h ${minutes}m ${seconds}s
+> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
+
+                    await socket.sendMessage(sender, { text: pongStatus }, { quoted: mek });
+                    await socket.sendMessage(sender, { react: { text: '✅', key: mek.key } });
+                    break;
+                }
+
+                case 'alive_menu': {
+                    // Send menu command text to trigger menu
+                    await socket.sendMessage(sender, { 
+                        text: `${sessionConfig.PREFIX || config.PREFIX}menu` 
+                    }, { quoted: mek });
+                    break;
+                }
+
+                default:
+                    break;
+            }
+        };
+
+        // Register the listener
+        socket.ev.on('messages.upsert', aliveButtonListener);
+
+        // Auto-remove listener after 5 minutes
+        const aliveTimeoutId = setTimeout(() => {
+            socket.ev.off('messages.upsert', aliveButtonListener);
+            console.log(`⏰ Alive button expired for ${sender}`);
+        }, 300000);
+
+        // Store timeout to clear if user clicks again
+        if (!global.aliveTimeouts) global.aliveTimeouts = new Map();
+        if (global.aliveTimeouts.has(sender)) {
+            clearTimeout(global.aliveTimeouts.get(sender));
+            // Also remove old listener if exists
+            const oldListener = global.aliveListeners?.get(sender);
+            if (oldListener) {
+                socket.ev.off('messages.upsert', oldListener);
+            }
+        }
+        global.aliveTimeouts.set(sender, aliveTimeoutId);
+
+        // Store listener reference for cleanup
+        if (!global.aliveListeners) global.aliveListeners = new Map();
+        global.aliveListeners.set(sender, aliveButtonListener);
+
+    } catch (e) {
+        console.error(e);
+        await socket.sendMessage(sender, {
+            text: `❌ ERROR\n\nAn error occurred: ${e.message}`
+        }, { quoted: msg });
+    }
+}
+break;
+
               
 case 'menu': {
     const videoNote = config.menuVideo || 'https://files.catbox.moe/ltocyv.mp4';
@@ -6704,137 +6870,7 @@ case 'app': {
 }
 break;
              
-case 'alive2': {
-    try {
-        const aliveMsg = `💬 𝑯𝒊 𝑩𝒐𝒕 𝑼𝒔𝒆𝒓 ! 𝑯𝒐𝒘 𝑨𝒓𝒆 𝒀𝒐𝒖 ?
 
-🤖 𝙄'𝙢 𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
-
-┌─❖ 𝑺𝒀𝑺𝑻𝑬𝑴 𝑴𝑶𝑵𝑰𝑻𝑶𝑹 ❖─┐
-│ 🟢 𝑵𝒆𝒕𝒘𝒐𝒓𝒌 : 𝑺𝒕𝒂𝒃𝒍𝒆
-│ 📗 𝑩𝒖𝒊𝒍𝒅   : 𝒗1.0.0
-│ 🛡️ 𝑴𝒐𝒅𝒆    : 𝑷𝒖𝒃𝒍𝒊𝒄
-│ ⚡ 𝑺𝒑𝒆𝒆𝒅   : ${Date.now() - msg.messageTimestamp * 1000}𝒎𝒔
-│ ⏳ 𝑨𝒄𝒕𝒊𝒗𝒆  : ${process.uptime().toFixed(0)}𝒔
-└─────────────❖
-
-┌─❖ 𝑸𝑼𝑰𝑪𝑲 𝑨𝑪𝑪𝑬𝑺𝑺 ❖─┐
-│ 🍀 𝑴𝒆𝒏𝒖  : .menu  ➜ 𝑮𝒆𝒕 𝑴𝒆𝒏𝒖
-│ 🍀 𝑶𝒘𝒏𝒆𝒓 : .owner ➜ 𝑪𝒐𝒏𝒕𝒂𝒄𝒕 𝑶𝒘𝒏𝒆𝒓
-└─────────────❖
-
- 𝑻𝒉𝒂𝒏𝒌 𝒀𝒐𝒖 𝑭𝒐𝒓 𝑼𝒔𝒊𝒏𝒈 𝑶𝒖𝒓 𝑺𝒆𝒓𝒗𝒊𝒄𝒆 ❤️
-
-> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
-
-        await socket.sendMessage(sender, {
-            image: { url: config.SITHIJA_IMAGE_PATH2 },
-            caption: aliveMsg,
-            footer: 'Simple JavaScript Bot ❤️',
-            buttons: [
-                {
-                    buttonId: 'btn_owner',
-                    buttonText: { displayText: '👑 Owner' },
-                    type: 1
-                },
-                {
-                    buttonId: 'btn_ping',
-                    buttonText: { displayText: '⚡ Ping' },
-                    type: 1
-                },
-                {
-                    buttonId: 'btn_menu',
-                    buttonText: { displayText: '📋 Menu' },
-                    type: 1
-                }
-            ],
-            headerType: 4
-        }, { quoted: msg });
-
-        await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
-
-    } catch (e) {
-        console.error(e);
-        await socket.sendMessage(sender, {
-            text: `❌ ERROR\n\nAn error occurred: ${e.message}`
-        }, { quoted: msg });
-    }
-}
-break;
-//===== BUTTON RESPONSE HANDLER (ADD THIS ONCE, OUTSIDE SWITCH) ======
-// Place this inside your main message handler, BEFORE the switch(command) block
-
-socket.ev.on('messages.upsert', async (messageUpdate) => {
-    const mek = messageUpdate.messages[0];
-    if (!mek.message) return;
-    
-    const sender = mek.key.remoteJid;
-    const buttonResponse = mek.message.buttonsResponseMessage || 
-                           mek.message.templateButtonReplyMessage ||
-                           mek.message.interactiveResponseMessage;
-    
-    if (!buttonResponse) return;
-    
-    const selectedId = buttonResponse.selectedButtonId || 
-                      buttonResponse.selectedId || 
-                      buttonResponse.buttonId;
-    
-    switch (selectedId) {
-        case 'btn_owner': {
-            await socket.sendMessage(sender, { react: { text: '👑', key: mek.key } });
-            const contactsArray = [
-                {
-                    displayName: '𝗢𝗪𝗡𝗘𝗥',
-                    vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:OWNER - SITHIJA\nTEL;type=CELL;type=VOICE;waid=94742838813:+94742838813\nEND:VCARD`
-                }
-            ];
-            await socket.sendMessage(sender, {
-                contacts: {
-                    displayName: "𝐎𝐖𝐍𝐄𝐑 𝐋𝐈𝐒𝐓",
-                    contacts: contactsArray
-                }
-            }, { quoted: mek });
-            break;
-        }
-        
-        case 'btn_ping': {
-            await socket.sendMessage(sender, { react: { text: '⚡', key: mek.key } });
-            const uptime = process.uptime();
-            const hours = Math.floor(uptime / 3600);
-            const minutes = Math.floor((uptime % 3600) / 60);
-            const seconds = Math.floor(uptime % 60);
-            const min = 0.001;
-            const max = 5.000;
-            const randomPing = (Math.random() * (max - min) + min).toFixed(3);
-            let status = "";
-            if (randomPing <= 1) status = "🚀 Quantum Speed";
-            else if (randomPing <= 2) status = "⚡ Lightning Fast";
-            else if (randomPing <= 3) status = "✅ Excellent";
-            else if (randomPing <= 4) status = "📶 Very Good";
-            else status = "🟢 Good";
-
-            const pongStatus = `
-📡 *ᴘɪɴɢ:* \`${randomPing}ms\`
-🛰️ *sᴛᴀᴛᴜs:* ${status}
-🆙 *ᴜᴘᴛɪᴍᴇ:* ${hours}h ${minutes}m ${seconds}s
-> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
-
-            await socket.sendMessage(sender, { text: pongStatus }, { quoted: mek });
-            await socket.sendMessage(sender, { react: { text: '✅', key: mek.key } });
-            break;
-        }
-        
-        case 'btn_menu': {
-            // Trigger menu command
-            // Option 1: Directly call menu logic
-            // Option 2: Send a message that triggers the menu
-            await socket.sendMessage(sender, { 
-                text: `${sessionConfig.PREFIX || config.PREFIX}menu` 
-            }, { quoted: mek });
-            break;
-        }
-    }
-});
 
               
 case 'ai':
