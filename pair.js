@@ -4310,9 +4310,14 @@ case 'csong': {
                 const dlData = dlRes.data.data;
                 const audioUrl = dlData.links?.audio || dlData.download_url;
                 const songTitle = dlData.title || selected.title;
-                const thumbnail = dlData.thumbnail || selected.thumbnail;
+                let thumbnail = dlData.thumbnail || selected.thumbnail;
                 const duration = dlData.duration || 'N/A';
                 const quality = dlData.quality_found || 'N/A';
+
+                // Fix null thumbnail
+                if (thumbnail === 'null' || thumbnail === null || !thumbnail) {
+                    thumbnail = null;
+                }
 
                 if (!audioUrl) throw new Error('No audio download link found');
 
@@ -4323,20 +4328,38 @@ case 'csong': {
 *🎶 Title:* ${songTitle}
 *⏱️ Duration:* ${duration}
 *🎚️ Quality:* ${quality}
-
 *🔗 Original:* ${selected.url}
 
 > ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
-                // Send image card to channel
+                // Send to channel with proper context (fixes "You sent" issue)
+                const channelMessageOptions = {
+                    contextInfo: {
+                        isForwarded: false,
+                        forwardingScore: 0,
+                        externalAdReply: {
+                            title: songTitle,
+                            body: `🎵 ${duration} | ${quality}`,
+                            thumbnailUrl: thumbnail || config.SITHIJA_IMAGE_PATH,
+                            sourceUrl: selected.url,
+                            mediaType: 1,
+                            renderLargerThumbnail: true,
+                            showAdAttribution: false
+                        },
+                        mentionedJid: []
+                    }
+                };
+
                 if (thumbnail && thumbnail.startsWith('http')) {
                     await socket.sendMessage(targetChannel, {
                         image: { url: thumbnail },
-                        caption: detailsCaption
+                        caption: detailsCaption,
+                        ...channelMessageOptions
                     });
                 } else {
                     await socket.sendMessage(targetChannel, {
-                        text: detailsCaption
+                        text: detailsCaption,
+                        ...channelMessageOptions
                     });
                 }
 
@@ -4348,7 +4371,19 @@ case 'csong': {
                 await socket.sendMessage(targetChannel, {
                     audio: { url: audioUrl },
                     mimetype: 'audio/mpeg',
-                    ptt: false
+                    ptt: false,
+                    contextInfo: {
+                        isForwarded: false,
+                        forwardingScore: 0,
+                        externalAdReply: {
+                            title: songTitle,
+                            body: `🎵 Audio Download`,
+                            thumbnailUrl: thumbnail || config.SITHIJA_IMAGE_PATH,
+                            sourceUrl: selected.url,
+                            mediaType: 2,
+                            renderLargerThumbnail: false
+                        }
+                    }
                 });
 
                 // ═══════ STEP 6: CONFIRMATION ═══════
@@ -4380,7 +4415,7 @@ case 'csong': {
     }
 
     break;
-}              
+}
 case 'ytmp4': {
     if (!args.length) {
         return await socket.sendMessage(sender, {
