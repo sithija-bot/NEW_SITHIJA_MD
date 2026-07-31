@@ -4651,9 +4651,37 @@ case 'updown': {
                     }, { quoted: replyMek });
                 }
 
-                // ═══════ STEP 6: SEND APK DOWNLOAD LINK ═══════
+                // ═══════ STEP 6: SEND APK FILE DIRECTLY ═══════
                 await socket.sendMessage(sender, {
-                    text: `⬇️ *Download Link:*\n\n${downloadLink}\n\n*How to Download:*\n1️⃣ Click the link above\n2️⃣ It will redirect to Uptodown\n3️⃣ Tap "Download" button\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                    react: { text: '⬆️', key: replyMek.key }
+                });
+
+                await socket.sendMessage(sender, {
+                    text: `⏳ *Uploading APK...*\n💾 *Size:* ${appData.file_size || 'N/A'}\n\nThis may take a while depending on file size...`
+                }, { quoted: replyMek });
+
+                // Send APK as document
+                const fileExt = appData.file_type ? appData.file_type.toLowerCase() : 'apk';
+                const mimeType = fileExt === 'xapk' ? 'application/vnd.android.package-archive' : 'application/vnd.android.package-archive';
+
+                await socket.sendMessage(sender, {
+                    document: { url: downloadLink },
+                    mimetype: mimeType,
+                    fileName: `${appData.title.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}_${appData.version || 'latest'}.${fileExt}`,
+                    caption: `📦 *${appData.title}*\n🔢 *Version:* ${appData.version || 'N/A'}\n💾 *Size:* ${appData.file_size || 'N/A'}\n\n✅ Downloaded from Uptodown\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`,
+                    contextInfo: {
+                        isForwarded: false,
+                        forwardingScore: 0,
+                        externalAdReply: {
+                            title: appData.title,
+                            body: `📦 ${appData.version || 'N/A'} | 💾 ${appData.file_size || 'N/A'}`,
+                            thumbnailUrl: appData.icon || config.SITHIJA_IMAGE_PATH,
+                            sourceUrl: selected.url,
+                            mediaType: 1,
+                            renderLargerThumbnail: true,
+                            showAdAttribution: false
+                        }
+                    }
                 }, { quoted: replyMek });
 
                 await socket.sendMessage(sender, { react: { text: '✅', key: replyMek.key } });
