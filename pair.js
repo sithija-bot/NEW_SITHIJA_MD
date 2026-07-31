@@ -5597,13 +5597,13 @@ case 'apk2': {
 }
 break;
               
- case 'menu':
-      const videoNote = config.menuVideo || 'https://files.catbox.moe/ltocyv.mp4';       
-    const menuMsg = await socket.sendMessage(sender, {
+case 'menu': {
+    const videoNote = config.menuVideo || 'https://files.catbox.moe/ltocyv.mp4';
     
-
+    // ====== BUTTON MENU MESSAGE ======
+    const menuMsg = await socket.sendMessage(sender, {
         image: { url: config.SITHIJA_IMAGE_PATH2 },
-        caption: ` 💬 𝑯𝒊 𝑩𝒐𝒕 𝑼𝒔𝒆𝒓 ! 𝑯𝒐𝒘 𝑨𝒓𝒆 𝒀𝒐𝒖 ?
+        caption: `💬 𝑯𝒊 𝑩𝒐𝒕 𝑼𝒔𝒆𝒓 ! 𝑯𝒐𝒘 𝑨𝒓𝒆 𝒀𝒐𝒖 ?
 
 🤖 𝙄'𝙢 𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
 
@@ -5613,43 +5613,73 @@ break;
 │ 🟢 𝑶𝒏𝒍𝒊𝒏𝒆    : 𝑻𝒓𝒖𝒆
 └─────────────❖
 
-┌─❖ 𝑴𝑬𝑵𝑼 𝑷𝑨𝑵𝑬𝑳
-│ 🍀 [1] 𝑴𝒂𝒊𝒏
-│ 🎥 [2] 𝑴𝒐𝒗𝒊𝒆𝒔
-│ 🛠️ [3] 𝑻𝒐𝒐𝒍𝒔 & 𝒂𝒊
-│ 📥 [4] 𝑫𝒐𝒘𝒏𝒍𝒐𝒂𝒅𝒔 & 𝒔𝒆𝒂𝒓𝒄𝒉
-│ 👥 [5] 𝑮𝒓𝒐𝒖𝒑 𝑴𝒂𝒏𝒂𝒈𝒆𝒎𝒆𝒏𝒕
-│ 🎮 [6] 𝑭𝒖𝒏 𝑮𝒂𝒎𝒆𝒔
-└─────────────❖
-📌 𝑹𝒆𝒑𝒍𝒚 𝑾𝒊𝒕𝒉 𝑻𝒉𝒆 𝑫𝒆𝒔𝒊𝒓𝒆𝒅 𝑶𝒑𝒕𝒊𝒐𝒏 𝑵𝒖𝒎𝒃𝒆𝒓
+📌 𝑪𝒍𝒊𝒄𝒌 𝑨 𝑩𝒖𝒕𝒕𝒐𝒏 𝑩𝒆𝒍𝒐𝒘 𝑻𝒐 𝑶𝒑𝒆𝒏 𝑴𝒆𝒏𝒖𝒔
 
-${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`,
+        footer: 'Simple JavaScript Bot ❤️',
+        buttons: [
+            {
+                buttonId: 'menu_main',
+                buttonText: { displayText: '🍀 Main Menu' },
+                type: 1
+            },
+            {
+                buttonId: 'menu_movies',
+                buttonText: { displayText: '🎥 Movies' },
+                type: 1
+            },
+            {
+                buttonId: 'menu_tools',
+                buttonText: { displayText: '🛠️ Tools & AI' },
+                type: 1
+            },
+            {
+                buttonId: 'menu_downloads',
+                buttonText: { displayText: '📥 Downloads & Search' },
+                type: 1
+            },
+            {
+                buttonId: 'menu_group',
+                buttonText: { displayText: '👥 Group Management' },
+                type: 1
+            },
+            {
+                buttonId: 'menu_games',
+                buttonText: { displayText: '🎮 Fun Games' },
+                type: 1
+            }
+        ],
+        headerType: 4
     }, { quoted: sudu });
-    
-    if (!global.activeMenuUsers) global.activeMenuUsers = new Set();
-    global.activeMenuUsers.add(sender);
-    
-    const menuListener = async (messageUpdate) => {
+
+    // ====== BUTTON RESPONSE HANDLER ======
+    const buttonListener = async (messageUpdate) => {
         const mek = messageUpdate.messages[0];
         if (!mek.message) return;
-        const isReplyToMenu = mek.message.extendedTextMessage?.contextInfo?.stanzaId === menuMsg.key.id;
-        const isFromSameUser = mek.key.remoteJid === sender;
-        const isStillActive = global.activeMenuUsers.has(sender);
-        let messageType = mek.message.conversation || 
-                         mek.message.extendedTextMessage?.text || 
-                         '';
-        messageType = messageType.trim();
         
-       if (isReplyToMenu && isFromSameUser && isStillActive && ['1','2','3','4','5','6'].includes(messageType)) {
-            await socket.sendMessage(sender, { 
-                react: { text: '✅', key: mek.key } 
-            });
-            
-            switch (messageType) {
-                case '1': 
-                    await socket.sendMessage(sender, {
-                        image: { url: config.SITHIJA_IMAGE_PATH },
-                        caption: `𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
+        const isFromSameUser = mek.key.remoteJid === sender;
+        
+        // Check if it's a button response
+        const buttonResponse = mek.message.buttonsResponseMessage || 
+                               mek.message.templateButtonReplyMessage ||
+                               mek.message.interactiveResponseMessage;
+        
+        if (!buttonResponse || !isFromSameUser) return;
+        
+        const selectedId = buttonResponse.selectedButtonId || 
+                          buttonResponse.selectedId || 
+                          buttonResponse.buttonId;
+        
+        // React to button click
+        await socket.sendMessage(sender, { 
+            react: { text: '✅', key: mek.key } 
+        });
+        
+        switch (selectedId) {
+            case 'menu_main': {
+                await socket.sendMessage(sender, {
+                    image: { url: config.SITHIJA_IMAGE_PATH },
+                    caption: `𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
 ┌─❖ 🟢 𝑩𝑶𝑻 𝑺𝒀𝑺𝑻𝑬𝑴 ❖─┐
 │
 ├ ❖ ${sessionConfig.PREFIX || config.PREFIX}menu
@@ -5682,17 +5712,23 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
 │      𝑰𝒏𝒇𝒐 & 𝑺𝒕𝒂𝒕𝒔
 │
 └───────────────────────❖
-${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-                    }, { quoted: mek });
-                    break;
-                    
-                case '2': 
-                    await socket.sendMessage(sender, {
-                        image: { url: config.SITHIJA_IMAGE_PATH },
-                        caption: `𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
+${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`,
+                    footer: 'Simple JavaScript Bot ❤️',
+                    buttons: [
+                        { buttonId: 'menu_back', buttonText: { displayText: '🔙 Back to Menu' }, type: 1 },
+                        { buttonId: 'menu_close', buttonText: { displayText: '❌ Close' }, type: 1 }
+                    ],
+                    headerType: 4
+                }, { quoted: mek });
+                break;
+            }
+            
+            case 'menu_movies': {
+                await socket.sendMessage(sender, {
+                    image: { url: config.SITHIJA_IMAGE_PATH },
+                    caption: `𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
 
 ┌─❖ 🍿 𝑬𝑵𝑻𝑬𝑹𝑻𝑨𝑰𝑵𝑴𝑬𝑵𝑻 ❖─┐
-│
 │
 ├ 🎬 ${sessionConfig.PREFIX || config.PREFIX}thenkiri <query>
 │   ╰➤ 𝑺𝒆𝒂𝒓𝒄𝒉 & 𝑫𝒐𝒘𝒏𝒍𝒐𝒂𝒅 𝑴𝒐𝒗𝒊𝒆𝒔
@@ -5719,14 +5755,21 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
 │
 └─────────────────────────❖
 
-${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-                    }, { quoted: mek });
-                    break;
-
-case '3': 
-                    await socket.sendMessage(sender, {
-                        image: { url: config.SITHIJA_IMAGE_PATH },
-                        caption: `𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
+${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`,
+                    footer: 'Simple JavaScript Bot ❤️',
+                    buttons: [
+                        { buttonId: 'menu_back', buttonText: { displayText: '🔙 Back to Menu' }, type: 1 },
+                        { buttonId: 'menu_close', buttonText: { displayText: '❌ Close' }, type: 1 }
+                    ],
+                    headerType: 4
+                }, { quoted: mek });
+                break;
+            }
+            
+            case 'menu_tools': {
+                await socket.sendMessage(sender, {
+                    image: { url: config.SITHIJA_IMAGE_PATH },
+                    caption: `𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
                         
 ┌─❖ ⚡ 𝑼𝑻𝑰𝑳𝑰𝑻𝒀 𝑻𝑶𝑶𝑳𝑺 ❖─┐
 │
@@ -5763,14 +5806,21 @@ case '3':
 │
 └─────────────────────────❖
 
-${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-                    }, { quoted: mek });
-                    break;
-
-case '4': 
-                    await socket.sendMessage(sender, {
-                        image: { url: config.SITHIJA_IMAGE_PATH },
-                        caption: `𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
+${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`,
+                    footer: 'Simple JavaScript Bot ❤️',
+                    buttons: [
+                        { buttonId: 'menu_back', buttonText: { displayText: '🔙 Back to Menu' }, type: 1 },
+                        { buttonId: 'menu_close', buttonText: { displayText: '❌ Close' }, type: 1 }
+                    ],
+                    headerType: 4
+                }, { quoted: mek });
+                break;
+            }
+            
+            case 'menu_downloads': {
+                await socket.sendMessage(sender, {
+                    image: { url: config.SITHIJA_IMAGE_PATH },
+                    caption: `𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
                         
 ┌─❖ ⚡ 𝑴𝑬𝑫𝑰𝑨 𝑫𝑶𝑾𝑵𝑳𝑶𝑨𝑫𝑬𝑹𝑺 ❖─┐
 │
@@ -5817,14 +5867,21 @@ case '4':
 │      𝑷𝒂𝒔𝒕 𝑷𝒂𝒑𝒆𝒓𝒔
 └─────────────────────────❖
    
-${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-                    }, { quoted: mek });
-                    break;
-
-case '5': 
-    await socket.sendMessage(sender, {
-        image: { url: config.SITHIJA_IMAGE_PATH },
-        caption: `𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
+${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`,
+                    footer: 'Simple JavaScript Bot ❤️',
+                    buttons: [
+                        { buttonId: 'menu_back', buttonText: { displayText: '🔙 Back to Menu' }, type: 1 },
+                        { buttonId: 'menu_close', buttonText: { displayText: '❌ Close' }, type: 1 }
+                    ],
+                    headerType: 4
+                }, { quoted: mek });
+                break;
+            }
+            
+            case 'menu_group': {
+                await socket.sendMessage(sender, {
+                    image: { url: config.SITHIJA_IMAGE_PATH },
+                    caption: `𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
         
 ┌─❖ 👥 𝑮𝑹𝑶𝑼𝑷 𝑴𝑨𝑵𝑨𝑮𝑬𝑴𝑬𝑵𝑻 ❖─┐
 │
@@ -5858,14 +5915,21 @@ case '5':
 │
 └───────────────────────❖
 
-${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-    }, { quoted: mek });
-    break;
-
-case '6': 
-    await socket.sendMessage(sender, {
-        image: { url: config.SITHIJA_IMAGE_PATH },
-        caption: `𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
+${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`,
+                    footer: 'Simple JavaScript Bot ❤️',
+                    buttons: [
+                        { buttonId: 'menu_back', buttonText: { displayText: '🔙 Back to Menu' }, type: 1 },
+                        { buttonId: 'menu_close', buttonText: { displayText: '❌ Close' }, type: 1 }
+                    ],
+                    headerType: 4
+                }, { quoted: mek });
+                break;
+            }
+            
+            case 'menu_games': {
+                await socket.sendMessage(sender, {
+                    image: { url: config.SITHIJA_IMAGE_PATH },
+                    caption: `𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
         
 ┌─❖ 🎮 𝑭𝑼𝑵 𝑮𝑨𝑴𝑬𝑺 ❖─┐
 │
@@ -5907,35 +5971,68 @@ case '6':
 │
 └───────────────────────❖
 
-${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-    }, { quoted: mek });
-    break;
-
-                    
-                default:
-                    await socket.sendMessage(sender, { text: '❌ Invalid option!' }, { quoted: mek });
-                    break;
+${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`,
+                    footer: 'Simple JavaScript Bot ❤️',
+                    buttons: [
+                        { buttonId: 'menu_back', buttonText: { displayText: '🔙 Back to Menu' }, type: 1 },
+                        { buttonId: 'menu_close', buttonText: { displayText: '❌ Close' }, type: 1 }
+                    ],
+                    headerType: 4
+                }, { quoted: mek });
+                break;
             }
+            
+            case 'menu_back': {
+                // Resend main menu
+                await socket.sendMessage(sender, {
+                    image: { url: config.SITHIJA_IMAGE_PATH2 },
+                    caption: `💬 𝑯𝒊 𝑩𝒐𝒕 𝑼𝒔𝒆𝒓 ! 𝑯𝒐𝒘 𝑨𝒓𝒆 𝒀𝒐𝒖 ?
 
-            console.log(`📱 User ${sender} selected option: ${messageType}`);
-        }
-        
-        else if (isFromSameUser && isStillActive && !isReplyToMenu && messageType.startsWith(sessionConfig.PREFIX || config.PREFIX)) {
-            global.activeMenuUsers.delete(sender);
-            socket.ev.off('messages.upsert', menuListener);
-            console.log(`🚪 User ${sender} exited menu (used other command)`);
+🤖 𝙄'𝙢 𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
+
+┌─❖ 𝑺𝒀𝑺𝑻𝑬𝑴 𝑶𝑽𝑬𝑹𝑽𝑰𝑬𝑾
+│ 👑 𝑫𝒆𝒗𝒆𝒍𝒐𝒑𝒆𝒓 : 𝑺𝒊𝒕𝒉𝒊𝒋𝒂
+│ 📦 𝑽𝒆𝒓𝒔𝒊𝒐𝒏   : 1.0.0
+│ 🟢 𝑶𝒏𝒍𝒊𝒏𝒆    : 𝑻𝒓𝒖𝒆
+└─────────────❖
+
+📌 𝑪𝒍𝒊𝒄𝒌 𝑨 𝑩𝒖𝒕𝒕𝒐𝒏 𝑩𝒆𝒍𝒐𝒘 𝑻𝒐 𝑶𝒑𝒆𝒏 𝑴𝒆𝒏𝒖𝒔
+
+${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`,
+                    footer: 'Simple JavaScript Bot ❤️',
+                    buttons: [
+                        { buttonId: 'menu_main', buttonText: { displayText: '🍀 Main Menu' }, type: 1 },
+                        { buttonId: 'menu_movies', buttonText: { displayText: '🎥 Movies' }, type: 1 },
+                        { buttonId: 'menu_tools', buttonText: { displayText: '🛠️ Tools & AI' }, type: 1 },
+                        { buttonId: 'menu_downloads', buttonText: { displayText: '📥 Downloads & Search' }, type: 1 },
+                        { buttonId: 'menu_group', buttonText: { displayText: '👥 Group Management' }, type: 1 },
+                        { buttonId: 'menu_games', buttonText: { displayText: '🎮 Fun Games' }, type: 1 }
+                    ],
+                    headerType: 4
+                }, { quoted: mek });
+                break;
+            }
+            
+            case 'menu_close': {
+                await socket.sendMessage(sender, { 
+                    text: '✅ Menu closed. Type ' + (sessionConfig.PREFIX || config.PREFIX) + 'menu to open again.' 
+                }, { quoted: mek });
+                socket.ev.off('messages.upsert', buttonListener);
+                break;
+            }
+            
+            default:
+                break;
         }
     };
     
-    socket.ev.on('messages.upsert', menuListener);
+    socket.ev.on('messages.upsert', buttonListener);
     
+    // Auto-remove listener after 5 minutes
     const timeoutId = setTimeout(() => {
-        if (global.activeMenuUsers.has(sender)) {
-            global.activeMenuUsers.delete(sender);
-            socket.ev.off('messages.upsert', menuListener);
-            console.log(`⏰ Menu session expired for ${sender}`);
-        }
-    }, 300000); 
+        socket.ev.off('messages.upsert', buttonListener);
+        console.log(`⏰ Button menu expired for ${sender}`);
+    }, 300000);
     
     if (!global.menuTimeouts) global.menuTimeouts = new Map();
     if (global.menuTimeouts.has(sender)) {
@@ -5944,6 +6041,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
     global.menuTimeouts.set(sender, timeoutId);
     
     break;
+}
 
 
               
