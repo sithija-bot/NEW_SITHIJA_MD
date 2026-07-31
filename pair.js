@@ -3294,64 +3294,150 @@ case 'system': {
         const totalMem = os.totalmem() / 1024 / 1024 / 1024;
         const freeMem = os.freemem() / 1024 / 1024 / 1024;
         const usedMem = totalMem - freeMem;
-
         const cpus = os.cpus();
-
         const uptime = process.uptime();
         const days = Math.floor(uptime / 86400);
         const hours = Math.floor((uptime % 86400) / 3600);
         const minutes = Math.floor((uptime % 3600) / 60);
         const seconds = Math.floor(uptime % 60);
 
-        const pingStart = Date.now();
-
-        await socket.sendMessage(sender, {
-            react: {
-                text: "⚙️",
-                key: msg.key
-            }
-        });
-
-        const ping = Date.now() - pingStart;
-
-        const text = `
-╭━━〔 🖥️ SYSTEM INFO 〕━━⬣
+        const sysText = `⚙️ 𝑺𝒀𝑺𝑻𝑬𝑴 𝑰𝑵𝑭𝑶
 
 🤖 ${config.BOT_NAME}
-⏱️ Uptime: ${days}d ${hours}h ${minutes}m ${seconds}s
-📡 Ping: ${ping} ms
-🟢 Node: ${process.version}
-
+⏱️ 𝑼𝒑𝒕𝒊𝒎𝒆: ${days}d ${hours}h ${minutes}m ${seconds}s
+📡 𝑷𝒊𝒏𝒈: ${Date.now() - msg.messageTimestamp * 1000}ms
+🟢 𝑵𝒐𝒅𝒆: ${process.version}
 💻 ${os.platform()} | ${os.arch()}
 🖥️ ${os.hostname()}
-
-⚙️ CPU: ${cpus[0].model}
-🧠 Cores: ${cpus.length}
-📊 Load: ${os.loadavg().map(v => v.toFixed(2)).join(" | ")}
-
-💾 RAM: ${usedMem.toFixed(2)} / ${totalMem.toFixed(2)} GB
-
+⚙️ 𝑪𝑷𝑼: ${cpus[0].model}
+🧠 𝑪𝒐𝒓𝒆𝒔: ${cpus.length}
+📊 𝑳𝒐𝒂𝒅: ${os.loadavg().map(v => v.toFixed(2)).join(" | ")}
+💾 𝑹𝑨𝑴: ${usedMem.toFixed(2)} / ${totalMem.toFixed(2)} GB
 🕒 ${new Date().toLocaleString()}
 
-╰━━━━━━━━━━━━━━━━━━⬣
+> ${config.BOT_FOOTER || ""}`;
 
-${config.BOT_FOOTER || ""}
-`;
-
+        // ====== SEND SYSTEM INFO WITH MENU BUTTON ======
         await socket.sendMessage(sender, {
-            text: text
-        }, {
-            quoted: msg
-        });
+            text: sysText,
+            footer: 'Simple JavaScript Bot ❤️',
+            buttons: [
+                {
+                    buttonId: 'sys_menu',
+                    buttonText: { displayText: '📋 Open Menu' },
+                    type: 1
+                }
+            ],
+            headerType: 1
+        }, { quoted: msg });
+
+        await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
+
+        // ====== BUTTON RESPONSE HANDLER (PER-USER) ======
+        const sysButtonListener = async (messageUpdate) => {
+            const mek = messageUpdate.messages[0];
+            if (!mek.message) return;
+
+            const isFromSameUser = mek.key.remoteJid === sender;
+
+            const buttonResponse = mek.message.buttonsResponseMessage || 
+                                   mek.message.templateButtonReplyMessage ||
+                                   mek.message.interactiveResponseMessage;
+
+            if (!buttonResponse || !isFromSameUser) return;
+
+            const selectedId = buttonResponse.selectedButtonId || 
+                              buttonResponse.selectedId || 
+                              buttonResponse.buttonId;
+
+            if (selectedId === 'sys_menu') {
+                await socket.sendMessage(sender, { 
+                    react: { text: '✅', key: mek.key } 
+                });
+
+                // ====== DIRECTLY SEND MENU ======
+                await socket.sendMessage(sender, {
+                    image: { url: config.SITHIJA_IMAGE_PATH2 },
+                    caption: `💬 𝑯𝒊 𝑩𝒐𝒕 𝑼𝒔𝒆𝒓 ! 𝑯𝒐𝒘 𝑨𝒓𝒆 𝒀𝒐𝒖 ?
+
+🤖 𝙄'𝙢 𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
+
+┌─❖ 𝑺𝒀𝑺𝑻𝑬𝑴 𝑶𝑽𝑬𝑹𝑽𝑰𝑬𝑾
+│ 👑 𝑫𝒆𝒗𝒆𝒍𝒐𝒑𝒆𝒓 : 𝑺𝒊𝒕𝒉𝒊𝒋𝒂
+│ 📦 𝑽𝒆𝒓𝒔𝒊𝒐𝒏   : 1.0.0
+│ 🟢 𝑶𝒏𝒍𝒊𝒏𝒆    : 𝑻𝒓𝒖𝒆
+└─────────────❖
+
+📌 𝑪𝒍𝒊𝒄𝒌 𝑨 𝑩𝒖𝒕𝒕𝒐𝒏 𝑩𝒆𝒍𝒐𝒘 𝑻𝒐 𝑶𝒑𝒆𝒏 𝑴𝒆𝒏𝒖𝒔
+
+${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`,
+                    footer: 'Simple JavaScript Bot ❤️',
+                    buttons: [
+                        {
+                            buttonId: 'menu_main',
+                            buttonText: { displayText: '🍀 Main Menu' },
+                            type: 1
+                        },
+                        {
+                            buttonId: 'menu_movies',
+                            buttonText: { displayText: '🎥 Movies' },
+                            type: 1
+                        },
+                        {
+                            buttonId: 'menu_tools',
+                            buttonText: { displayText: '🛠️ Tools & AI' },
+                            type: 1
+                        },
+                        {
+                            buttonId: 'menu_downloads',
+                            buttonText: { displayText: '📥 Downloads & Search' },
+                            type: 1
+                        },
+                        {
+                            buttonId: 'menu_group',
+                            buttonText: { displayText: '👥 Group Management' },
+                            type: 1
+                        },
+                        {
+                            buttonId: 'menu_games',
+                            buttonText: { displayText: '🎮 Fun Games' },
+                            type: 1
+                        }
+                    ],
+                    headerType: 4
+                }, { quoted: mek });
+            }
+        };
+
+        // Register the listener
+        socket.ev.on('messages.upsert', sysButtonListener);
+
+        // Auto-remove listener after 5 minutes
+        const sysTimeoutId = setTimeout(() => {
+            socket.ev.off('messages.upsert', sysButtonListener);
+            console.log(`⏰ System button expired for ${sender}`);
+        }, 300000);
+
+        // Store timeout and listener
+        if (!global.sysTimeouts) global.sysTimeouts = new Map();
+        if (!global.sysListeners) global.sysListeners = new Map();
+        
+        if (global.sysTimeouts.has(sender)) {
+            clearTimeout(global.sysTimeouts.get(sender));
+            const oldSysListener = global.sysListeners.get(sender);
+            if (oldSysListener) {
+                socket.ev.off('messages.upsert', oldSysListener);
+            }
+        }
+        
+        global.sysTimeouts.set(sender, sysTimeoutId);
+        global.sysListeners.set(sender, sysButtonListener);
 
     } catch (err) {
         console.error(err);
-
         await socket.sendMessage(sender, {
-            text: "❌ Failed to fetch system information.\n\n" + err.message
-        }, {
-            quoted: msg
-        });
+            text: `❌ Failed to fetch system information.\n\n${err.message}`
+        }, { quoted: msg });
     }
 }
 break;
