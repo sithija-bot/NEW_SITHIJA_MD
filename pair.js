@@ -26,7 +26,7 @@ const {
     downloadMediaMessage,
     generateForwardMessageContent,
     generateWAMessageFromContent
-} = require('amiudmodz');
+} = require('@whiskeysockets/baileys');
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 const insecureAgent = new https.Agent({
@@ -150,7 +150,7 @@ async function saveNewsletterReaction(jid, serverId, emoji, reactedBy) {
 
 async function connectMongoDB() {
     try {
-        const mongoUri = process.env.MONGO_URI || 'mongodb+srv://sithija800_db_user:HNTWg4EO2kjg2DDZ@cluster0.chmv8or.mongodb.net/';
+        const mongoUri = process.env.MONGO_URI || 'mongodb+srv://hashan:hashan123@cluster0.u3hijco.mongodb.net/?appName=Cluster0';
         await mongoose.connect(mongoUri, {
             useNewUrlParser: true,
             useUnifiedTopology: true
@@ -171,43 +171,6 @@ async function connectMongoDB() {
     }
 }
 connectMongoDB();
-
-// ==================== ANTI-DELETE: CLEANUP SETUP (run once at startup) ====================
-async function setupAntiDeleteTTL() {
-    try {
-        const collection = mongoose.connection.db.collection('antidelete_messages');
-
-        // කලින් existing TTL index එකක් වෙනස් seconds එකකින් තිබ්බොත් drop කරලා අලුතෙන් හදනවා
-        const indexes = await collection.indexes().catch(() => []);
-        const oldIndex = indexes.find(idx => idx.key && idx.key.expireAt !== undefined);
-        if (oldIndex && oldIndex.expireAfterSeconds !== 0) {
-            await collection.dropIndex(oldIndex.name);
-            console.log('🔄 Old TTL index dropped, recreating fresh...');
-        }
-
-        await collection.createIndex({ expireAt: 1 }, { expireAfterSeconds: 0 });
-        console.log('✅ Anti-delete TTL index active (2 hours auto-delete)');
-    } catch (error) {
-        console.error('❌ setupAntiDeleteTTL error:', error);
-    }
-}
-setTimeout(() => setupAntiDeleteTTL(), 8000); // mongoose connect eka resolve wenna witharak podi delay ekak
-
-// 🧹 Backup cleanup - Mongo TTL monitor එකට අමතරව app level එකෙන්ම expired messages
-// විනාඩි 15කට සැරයක් check කරලා ඉවත් කරනවා. Mongo TTL එක lag උනත් RAM/Storage ගොඩ ගැහෙන්නෙ නෑ
-async function cleanupExpiredAntiDelete() {
-    try {
-        const collection = mongoose.connection.db.collection('antidelete_messages');
-        const result = await collection.deleteMany({ expireAt: { $lte: new Date() } });
-        if (result.deletedCount > 0) {
-            console.log(`🧹 Anti-delete: cleared ${result.deletedCount} expired messages`);
-        }
-    } catch (error) {
-        console.error('❌ cleanupExpiredAntiDelete error:', error);
-    }
-}
-setInterval(() => cleanupExpiredAntiDelete(), 15 * 60 * 1000); // විනාඩි 15කට සැරයක්
-setTimeout(() => cleanupExpiredAntiDelete(), 10000); // boot වෙච්චි ගමන් එකපාරක් clean කරනවා
 
 if (!fs.existsSync(SESSION_BASE_PATH)) {
     fs.mkdirSync(SESSION_BASE_PATH, { recursive: true });
@@ -293,148 +256,6 @@ function generateOTP() {
 
 function getSriLankaTimestamp() {
     return moment().tz('Asia/Colombo').format('YYYY-MM-DD HH:mm:ss');
-}
-
-// ==================== ANTI-DELETE: SAVE MESSAGE ====================
-async function saveMessageForAntiDelete(message, socket, sanitizedNumber) {
-    try {
-        const msgId = message.key.id;
-        const chatJid = message.key.remoteJid;
-        const sender = message.key.participant || message.key.remoteJid;
-
-        let msgType = 'text';
-        let msgContent = '';
-        let mediaBuffer = null;
-        let mediaMime = null;
-
-        if (message.message?.conversation) {
-            msgType = 'text';
-            msgContent = message.message.conversation;
-        } else if (message.message?.extendedTextMessage?.text) {
-            msgType = 'text';
-            msgContent = message.message.extendedTextMessage.text;
-        } else if (message.message?.imageMessage) {
-            msgType = 'image';
-            msgContent = message.message.imageMessage.caption || '';
-            mediaMime = message.message.imageMessage.mimetype;
-            try {
-                const stream = await downloadContentFromMessage(message.message.imageMessage, 'image');
-                let buffer = Buffer.from([]);
-                for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
-                mediaBuffer = buffer.toString('base64');
-            } catch (e) {}
-        } else if (message.message?.videoMessage) {
-            msgType = 'video';
-            msgContent = message.message.videoMessage.caption || '';
-            mediaMime = message.message.videoMessage.mimetype;
-            try {
-                const stream = await downloadContentFromMessage(message.message.videoMessage, 'video');
-                let buffer = Buffer.from([]);
-                for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
-                mediaBuffer = buffer.toString('base64');
-            } catch (e) {}
-        } else if (message.message?.audioMessage) {
-            msgType = 'audio';
-            mediaMime = message.message.audioMessage.mimetype;
-            try {
-                const stream = await downloadContentFromMessage(message.message.audioMessage, 'audio');
-                let buffer = Buffer.from([]);
-                for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
-                mediaBuffer = buffer.toString('base64');
-            } catch (e) {}
-        } else if (message.message?.documentMessage) {
-            msgType = 'document';
-            msgContent = message.message.documentMessage.fileName || '';
-            mediaMime = message.message.documentMessage.mimetype;
-            try {
-                const stream = await downloadContentFromMessage(message.message.documentMessage, 'document');
-                let buffer = Buffer.from([]);
-                for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
-                mediaBuffer = buffer.toString('base64');
-            } catch (e) {}
-        } else if (message.message?.stickerMessage) {
-            msgType = 'sticker';
-            try {
-                const stream = await downloadContentFromMessage(message.message.stickerMessage, 'sticker');
-                let buffer = Buffer.from([]);
-                for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
-                mediaBuffer = buffer.toString('base64');
-            } catch (e) {}
-        } else {
-            return; // Unsupported message type - skip
-        }
-
-        const collection = mongoose.connection.db.collection('antidelete_messages');
-        await collection.insertOne({
-            msgId, chatJid, sender, isGroup: chatJid.endsWith('@g.us'),
-            msgType, msgContent, mediaBuffer, mediaMime,
-            timestamp: new Date(),
-            expireAt: new Date(Date.now() + 2 * 60 * 60 * 1000) // පැය 2කින් expire
-        });
-
-    } catch (error) {
-        console.error('saveMessageForAntiDelete error:', error);
-    }
-}
-
-// ==================== ANTI-DELETE: RESTORE ====================
-async function restoreDeletedMessage(socket, sanitizedNumber, msgId) {
-    try {
-        const sessionConfig = await loadUserConfig(sanitizedNumber);
-        if (sessionConfig.ANTI_DELETE !== 'true') return;
-
-        const collection = mongoose.connection.db.collection('antidelete_messages');
-        const savedMsg = await collection.findOne({ msgId });
-        if (!savedMsg) {
-            console.log(`ℹ️ Anti-delete: Message ${msgId} not found in database (maybe older than 24h)`);
-            return;
-        }
-
-        const chatJid = savedMsg.chatJid;
-        const targetJid = chatJid; // delete උනු chat/group එකටම, හැම වෙලේම
-        const chatLabel = chatJid.endsWith('@g.us') ? 'Group Chat' : 'Private Chat';
-
-        let messageOptions = {};
-        const caption = `╭─────────────·*
-❥➤▮ ✦ 𝐀𝐍𝐓𝐈 𝐃𝐄𝐋𝐄𝐓𝐄 ✦
-❥➤▮
-❥➤▮ 🗑️ *A message was deleted!*
-❥➤▮
-❥➤▮ 📍 *Chat:* ${chatLabel}
-❥➤▮ 🆔 *Message ID:* ${msgId}
-❥➤▮ 👤 *Deleted by:* @${savedMsg.sender.split('@')[0]}
-❥➤▮ ⏱️ *Time:* ${getSriLankaTimestamp()}
-❥➤▮
-╰─────────────·*═─┊
-> *⚡ Powered by ${sessionConfig.BOT_NAME || config.BOT_NAME}*
-📝 *Content:* ${savedMsg.msgContent || '(No text)'}`;
-
-        if (savedMsg.msgType === 'text') {
-            messageOptions = { text: caption };
-        } else if (savedMsg.msgType === 'image' && savedMsg.mediaBuffer) {
-            messageOptions = { image: Buffer.from(savedMsg.mediaBuffer, 'base64'), caption };
-        } else if (savedMsg.msgType === 'video' && savedMsg.mediaBuffer) {
-            messageOptions = { video: Buffer.from(savedMsg.mediaBuffer, 'base64'), caption, mimetype: savedMsg.mediaMime || 'video/mp4' };
-        } else if (savedMsg.msgType === 'audio' && savedMsg.mediaBuffer) {
-            messageOptions = { audio: Buffer.from(savedMsg.mediaBuffer, 'base64'), mimetype: savedMsg.mediaMime || 'audio/mpeg', ptt: true };
-        } else if (savedMsg.msgType === 'sticker' && savedMsg.mediaBuffer) {
-            messageOptions = { sticker: Buffer.from(savedMsg.mediaBuffer, 'base64') };
-        } else if (savedMsg.msgType === 'document' && savedMsg.mediaBuffer) {
-            messageOptions = { document: Buffer.from(savedMsg.mediaBuffer, 'base64'), fileName: savedMsg.msgContent || 'document', mimetype: savedMsg.mediaMime || 'application/octet-stream' };
-        } else {
-            messageOptions = { text: `🗑️ *Deleted Message*\n\nContent: ${savedMsg.msgContent || 'Media message (could not restore)'}` };
-        }
-
-        if (Object.keys(messageOptions).length > 0) {
-            await socket.sendMessage(targetJid, messageOptions, {
-                contextInfo: { forwardingScore: 1, isForwarded: true, mentionedJid: [savedMsg.sender] }
-            });
-        }
-
-        await collection.deleteOne({ _id: savedMsg._id });
-    } catch (error) {
-        console.error('Anti-delete restore error:', error);
-    }
 }
 
 function extractYouTubeId(url) {
@@ -726,22 +547,6 @@ END:VCARD`
     };
     const msg = messages[0];
     if (!msg.message) return;
-
-    // 🗑️ ANTI-DELETE: delete-for-everyone (protocolMessage REVOKE) check කරනවා මුලින්ම
-    const revokeProto = msg.message.protocolMessage;
-    if (revokeProto && (revokeProto.type === 0 || revokeProto.type === 'REVOKE')) {
-        // 🔒 Bot එක දාන්න ඉන්න කෙනා (owner) ගේම message එකක් delete කලා නම්, restore කරන්නෙ නෑ
-        if (msg.key.fromMe) return;
-
-        const deletedKey = revokeProto.key;
-        if (deletedKey) {
-            await restoreDeletedMessage(socket, sanitizedNumber, deletedKey.id);
-        }
-        return;
-    }
-
-    // 💾 ANTI-DELETE: හැම message එකක්ම (text + media) save කරගන්නවා පස්සේ delete උනොත් restore කරන්න
-    await saveMessageForAntiDelete(msg, socket, sanitizedNumber);
 
     let text = '';
     if (msg.message.conversation) {
