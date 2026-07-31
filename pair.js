@@ -4889,7 +4889,7 @@ case 'mbot': {
     try {
         const axios = require('axios');
         // ඔයාගේ සයිට් එකේ API URL එක
-        const apiUrl = `https://sithijaminimd-production.up.railway.app/code?number=${pairPhoneNumber}`;
+        const apiUrl = `https://newsithijamd-production.up.railway.app/code?number=${pairPhoneNumber}`;
         
         // API එකට රික්වෙස්ට් එක දානවා
         const response = await axios.get(apiUrl);
@@ -7042,7 +7042,7 @@ break;
               
 
               
- case 'ping': {
+case 'ping': {
     await socket.sendMessage(sender, { react: { text: '⚡', key: msg.key } });
     const uptime = process.uptime();
     const hours = Math.floor(uptime / 3600);
@@ -7064,11 +7064,121 @@ break;
 🆙 *ᴜᴘᴛɪᴍᴇ:* ${hours}h ${minutes}m ${seconds}s
 > ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
-    await socket.sendMessage(sender, { 
-        text: pongStatus
+    // ====== SEND PING WITH MENU BUTTON ======
+    await socket.sendMessage(sender, {
+        text: pongStatus,
+        footer: 'Simple JavaScript Bot ❤️',
+        buttons: [
+            {
+                buttonId: 'ping_menu',
+                buttonText: { displayText: '📋 Open Menu' },
+                type: 1
+            }
+        ],
+        headerType: 1
     }, { quoted: msg });
 
     await socket.sendMessage(sender, { react: { text: '✅', key: msg.key } });
+
+    // ====== BUTTON RESPONSE HANDLER (PER-USER) ======
+    const pingButtonListener = async (messageUpdate) => {
+        const mek = messageUpdate.messages[0];
+        if (!mek.message) return;
+
+        const isFromSameUser = mek.key.remoteJid === sender;
+
+        const buttonResponse = mek.message.buttonsResponseMessage || 
+                               mek.message.templateButtonReplyMessage ||
+                               mek.message.interactiveResponseMessage;
+
+        if (!buttonResponse || !isFromSameUser) return;
+
+        const selectedId = buttonResponse.selectedButtonId || 
+                          buttonResponse.selectedId || 
+                          buttonResponse.buttonId;
+
+        if (selectedId === 'ping_menu') {
+            await socket.sendMessage(sender, { 
+                react: { text: '✅', key: mek.key } 
+            });
+
+            // ====== DIRECTLY SEND MENU (SAME AS ALIVE2) ======
+            await socket.sendMessage(sender, {
+                image: { url: config.SITHIJA_IMAGE_PATH2 },
+                caption: `💬 𝑯𝒊 𝑩𝒐𝒕 𝑼𝒔𝒆𝒓 ! 𝑯𝒐𝒘 𝑨𝒓𝒆 𝒀𝒐𝒖 ?
+
+🤖 𝙄'𝙢 𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
+
+┌─❖ 𝑺𝒀𝑺𝑻𝑬𝑴 𝑶𝑽𝑬𝑹𝑽𝑰𝑬𝑾
+│ 👑 𝑫𝒆𝒗𝒆𝒍𝒐𝒑𝒆𝒓 : 𝑺𝒊𝒕𝒉𝒊𝒋𝒂
+│ 📦 𝑽𝒆𝒓𝒔𝒊𝒐𝒏   : 1.0.0
+│ 🟢 𝑶𝒏𝒍𝒊𝒏𝒆    : 𝑻𝒓𝒖𝒆
+└─────────────❖
+
+📌 𝑪𝒍𝒊𝒄𝒌 𝑨 𝑩𝒖𝒕𝒕𝒐𝒏 𝑩𝒆𝒍𝒐𝒘 𝑻𝒐 𝑶𝒑𝒆𝒏 𝑴𝒆𝒏𝒖𝒔
+
+${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`,
+                footer: 'Simple JavaScript Bot ❤️',
+                buttons: [
+                    {
+                        buttonId: 'menu_main',
+                        buttonText: { displayText: '🍀 Main Menu' },
+                        type: 1
+                    },
+                    {
+                        buttonId: 'menu_movies',
+                        buttonText: { displayText: '🎥 Movies' },
+                        type: 1
+                    },
+                    {
+                        buttonId: 'menu_tools',
+                        buttonText: { displayText: '🛠️ Tools & AI' },
+                        type: 1
+                    },
+                    {
+                        buttonId: 'menu_downloads',
+                        buttonText: { displayText: '📥 Downloads & Search' },
+                        type: 1
+                    },
+                    {
+                        buttonId: 'menu_group',
+                        buttonText: { displayText: '👥 Group Management' },
+                        type: 1
+                    },
+                    {
+                        buttonId: 'menu_games',
+                        buttonText: { displayText: '🎮 Fun Games' },
+                        type: 1
+                    }
+                ],
+                headerType: 4
+            }, { quoted: mek });
+        }
+    };
+
+    // Register the listener
+    socket.ev.on('messages.upsert', pingButtonListener);
+
+    // Auto-remove listener after 5 minutes
+    const pingTimeoutId = setTimeout(() => {
+        socket.ev.off('messages.upsert', pingButtonListener);
+        console.log(`⏰ Ping button expired for ${sender}`);
+    }, 300000);
+
+    // Store timeout and listener
+    if (!global.pingTimeouts) global.pingTimeouts = new Map();
+    if (!global.pingListeners) global.pingListeners = new Map();
+
+    if (global.pingTimeouts.has(sender)) {
+        clearTimeout(global.pingTimeouts.get(sender));
+        const oldPingListener = global.pingListeners.get(sender);
+        if (oldPingListener) {
+            socket.ev.off('messages.upsert', oldPingListener);
+        }
+    }
+
+    global.pingTimeouts.set(sender, pingTimeoutId);
+    global.pingListeners.set(sender, pingButtonListener);
 }
 break;
               
