@@ -26,7 +26,7 @@ const {
     downloadMediaMessage,
     generateForwardMessageContent,
     generateWAMessageFromContent
-} = require('@whiskeysockets/baileys');
+} = require('amiudmodz');
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 const insecureAgent = new https.Agent({
