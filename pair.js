@@ -5676,7 +5676,11 @@ case 'alive2': {
                     const contactsArray = [
                         {
                             displayName: '𝗢𝗪𝗡𝗘𝗥',
-                            vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:OWNER - SITHIJA\nTEL;type=CELL;type=VOICE;waid=94742838813:+94742838813\nEND:VCARD`
+                            vcard: `BEGIN:VCARD
+VERSION:3.0
+FN:OWNER - SITHIJA
+TEL;type=CELL;type=VOICE;waid=94742838813:+94742838813
+END:VCARD`
                         }
                     ];
                     await socket.sendMessage(sender, {
@@ -5716,9 +5720,56 @@ case 'alive2': {
                 }
 
                 case 'alive_menu': {
-                    // Send menu command text to trigger menu
-                    await socket.sendMessage(sender, { 
-                        text: `${sessionConfig.PREFIX || config.PREFIX}menu` 
+                    // ====== DIRECTLY SEND MENU (NOT .menu text) ======
+                    await socket.sendMessage(sender, {
+                        image: { url: config.SITHIJA_IMAGE_PATH2 },
+                        caption: `💬 𝑯𝒊 𝑩𝒐𝒕 𝑼𝒔𝒆𝒓 ! 𝑯𝒐𝒘 𝑨𝒓𝒆 𝒀𝒐𝒖 ?
+
+🤖 𝙄'𝙢 𝙎𝙞𝙢𝙥𝙡𝙚 𝙅𝙖𝙫𝙖𝙎𝙘𝙧𝙞𝙥𝙩 𝘽𝙤𝙩 ❤️
+
+┌─❖ 𝑺𝒀𝑺𝑻𝑬𝑴 𝑶𝑽𝑬𝑹𝑽𝑰𝑬𝑾
+│ 👑 𝑫𝒆𝒗𝒆𝒍𝒐𝒑𝒆𝒓 : 𝑺𝒊𝒕𝒉𝒊𝒋𝒂
+│ 📦 𝑽𝒆𝒓𝒔𝒊𝒐𝒏   : 1.0.0
+│ 🟢 𝑶𝒏𝒍𝒊𝒏𝒆    : 𝑻𝒓𝒖𝒆
+└─────────────❖
+
+📌 𝑪𝒍𝒊𝒄𝒌 𝑨 𝑩𝒖𝒕𝒕𝒐𝒏 𝑩𝒆𝒍𝒐𝒘 𝑻𝒐 𝑶𝒑𝒆𝒏 𝑴𝒆𝒏𝒖𝒔
+
+${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`,
+                        footer: 'Simple JavaScript Bot ❤️',
+                        buttons: [
+                            {
+                                buttonId: 'menu_main',
+                                buttonText: { displayText: '🍀 Main Menu' },
+                                type: 1
+                            },
+                            {
+                                buttonId: 'menu_movies',
+                                buttonText: { displayText: '🎥 Movies' },
+                                type: 1
+                            },
+                            {
+                                buttonId: 'menu_tools',
+                                buttonText: { displayText: '🛠️ Tools & AI' },
+                                type: 1
+                            },
+                            {
+                                buttonId: 'menu_downloads',
+                                buttonText: { displayText: '📥 Downloads & Search' },
+                                type: 1
+                            },
+                            {
+                                buttonId: 'menu_group',
+                                buttonText: { displayText: '👥 Group Management' },
+                                type: 1
+                            },
+                            {
+                                buttonId: 'menu_games',
+                                buttonText: { displayText: '🎮 Fun Games' },
+                                type: 1
+                            }
+                        ],
+                        headerType: 4
                     }, { quoted: mek });
                     break;
                 }
@@ -5756,12 +5807,13 @@ case 'alive2': {
     } catch (e) {
         console.error(e);
         await socket.sendMessage(sender, {
-            text: `❌ ERROR\n\nAn error occurred: ${e.message}`
+            text: `❌ ERROR
+
+An error occurred: ${e.message}`
         }, { quoted: msg });
     }
 }
 break;
-
               
 case 'menu': {
     const videoNote = config.menuVideo || 'https://files.catbox.moe/ltocyv.mp4';
